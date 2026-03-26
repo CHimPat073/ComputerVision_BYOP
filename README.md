@@ -38,7 +38,25 @@ Facial expressions are analyzed using a pretrained model to estimate
 emotions such as **stress, anger, or sadness**, which may indicate
 unsafe driving conditions.
 
-Each module contributes to the overall driver risk score.
+------------------------------------------------------------------------
+
+# 📱 SMS Alerts (Optional)
+
+The system can send automated SMS alerts to specified phone numbers when critical events occur.
+
+### Setup
+1. Sign up for a [Twilio account](https://www.twilio.com/) and get a phone number.
+2. Install dependencies: `pip install -r requirements.txt` (includes Twilio).
+3. Set environment variables:
+   ```
+   export TWILIO_ACCOUNT_SID="your_account_sid"
+   export TWILIO_AUTH_TOKEN="your_auth_token"
+   export TWILIO_FROM_NUMBER="+1234567890"  # Your Twilio number
+   export ALERT_TO_NUMBERS="+0987654321,+1123456789"  # Comma-separated recipients
+   ```
+4. Enable SMS in `config.py` by setting `ENABLE_SMS = True`.
+
+Alerts will be sent for drowsiness, phone detection, and critical risk levels.
 
 ------------------------------------------------------------------------
 

@@ -18,6 +18,12 @@ try:
 except:
     TTS_OK = False
 
+try:
+    from twilio.rest import Client
+    TWILIO_OK = True
+except:
+    TWILIO_OK = False
+
 
 AlertEvent = collections.namedtuple(
     "AlertEvent", ["timestamp", "alert_type", "message", "risk_level"]
@@ -31,8 +37,10 @@ class AlertSystem:
         self._tts_queue = queue.Queue(maxsize=5)
 
         self.engine = None
+        self.twilio_client = None
 
         print("🔊 TTS Enabled:", config.ENABLE_TTS and TTS_OK)
+        print("📱 SMS Enabled:", config.ENABLE_SMS and TWILIO_OK and config.TWILIO_ACCOUNT_SID)
 
         if config.ENABLE_TTS and TTS_OK:
             try:
@@ -42,6 +50,12 @@ class AlertSystem:
                 threading.Thread(target=self._tts_worker, daemon=True).start()
             except Exception as e:
                 print("[TTS INIT ERROR]", e)
+
+        if config.ENABLE_SMS and TWILIO_OK and config.TWILIO_ACCOUNT_SID:
+            try:
+                self.twilio_client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
+            except Exception as e:
+                print("[SMS INIT ERROR]", e)
 
         self._alert_sound = None
         if config.ENABLE_SOUND and PYGAME_OK:
@@ -54,6 +68,7 @@ class AlertSystem:
             fired += self._fire("drowsiness_mild", risk["risk_level"])
 
         if phone["phone_detected"]:
+            print(f"[DEBUG] Phone detected: {phone}")  # Debug print
             fired += self._fire("phone_detected", risk["risk_level"])
 
         if risk["risk_level"] == "CRITICAL":
@@ -65,7 +80,16 @@ class AlertSystem:
         now = time.time()
         last = self._cooldowns.get(alert_type, 0)
 
-        if now - last < config.ALERT_COOLDOWN_SEC:
+        # For SMS, send every time without cooldown
+        send_sms = config.ENABLE_SMS and self.twilio_client and config.ALERT_TO_NUMBERS
+
+        if send_sms:
+            msg = config.ALERT_MESSAGES.get(alert_type, "Alert!")
+            threading.Thread(target=self._send_sms, args=(msg,), daemon=True).start()
+            print(f"[ALERT] {msg} (SMS sent)")
+
+        # Apply cooldown only for non-SMS alerts
+        if not send_sms and now - last < config.ALERT_COOLDOWN_SEC:
             return []
 
         self._cooldowns[alert_type] = now
@@ -81,6 +105,19 @@ class AlertSystem:
 
         print(f"[ALERT] {msg}")
         return [msg]
+
+    def _send_sms(self, message):
+        for number in config.ALERT_TO_NUMBERS:
+            if number.strip():
+                try:
+                    self.twilio_client.messages.create(
+                        body=message,
+                        from_=config.TWILIO_FROM_NUMBER,
+                        to=number.strip()
+                    )
+                    print(f"[SMS] Sent to {number}: {message}")
+                except Exception as e:
+                    print(f"[SMS ERROR] Failed to send to {number}: {e}")
 
     def _tts_worker(self):
         while True:

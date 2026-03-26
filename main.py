@@ -6,6 +6,10 @@ import threading
 import time
 import cv2
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # ── Ensure project root in path ───────────────────────────
 _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if _PROJECT_ROOT not in sys.path:

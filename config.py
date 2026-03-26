@@ -2,6 +2,8 @@
 Driver Safety System — Central Configuration
 """
 
+import os
+
 # CAMERA
 CAMERA_INDEX = 0
 FRAME_WIDTH  = 640
@@ -53,8 +55,15 @@ RISK_COLORS = {
 # ALERT SYSTEM
 ENABLE_TTS         = True
 ENABLE_SOUND       = True
+ENABLE_SMS         = True  # New: Enable SMS alerts
 ALERT_COOLDOWN_SEC = 2
 ALERT_SOUND_FILE   = "assets/alert.wav"
+
+# Twilio SMS Configuration (use environment variables for security)
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")  # Your Twilio phone number
+ALERT_TO_NUMBERS   = os.getenv("ALERT_TO_NUMBERS", "").split(",")  # Comma-separated list of recipient numbers
 
 ALERT_MESSAGES = {
     "drowsiness_mild":  "Stay alert",
