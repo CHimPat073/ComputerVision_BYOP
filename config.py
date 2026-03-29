@@ -55,15 +55,16 @@ RISK_COLORS = {
 # ALERT SYSTEM
 ENABLE_TTS         = True
 ENABLE_SOUND       = True
-ENABLE_SMS         = True  # New: Enable SMS alerts
+ENABLE_EMAIL       = True  # Enable email alerts
 ALERT_COOLDOWN_SEC = 2
 ALERT_SOUND_FILE   = "assets/alert.wav"
 
-# Twilio SMS Configuration (use environment variables for security)
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")  # Your Twilio phone number
-ALERT_TO_NUMBERS   = os.getenv("ALERT_TO_NUMBERS", "").split(",")  # Comma-separated list of recipient numbers
+# Email Configuration (use environment variables for security)
+EMAIL_SENDER       = os.getenv("EMAIL_SENDER")  # Your email address (e.g., alerts@example.com)
+EMAIL_PASSWORD     = os.getenv("EMAIL_PASSWORD")  # Your email password or app-specific password
+EMAIL_SMTP_SERVER  = os.getenv("EMAIL_SMTP_SERVER", "smtp.gmail.com")  # SMTP server
+EMAIL_SMTP_PORT    = int(os.getenv("EMAIL_SMTP_PORT", "587"))  # SMTP port (587 for TLS)
+ALERT_TO_EMAILS    = os.getenv("ALERT_TO_EMAILS", "").split(",")  # Comma-separated list of recipient emails
 
 ALERT_MESSAGES = {
     "drowsiness_mild":  "Stay alert",

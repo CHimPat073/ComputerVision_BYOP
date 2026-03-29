@@ -4,6 +4,9 @@ import threading
 import collections
 import os
 import config
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 try:
     import pygame
@@ -18,11 +21,7 @@ try:
 except:
     TTS_OK = False
 
-try:
-    from twilio.rest import Client
-    TWILIO_OK = True
-except:
-    TWILIO_OK = False
+EMAIL_OK = True  # smtplib is built-in
 
 
 AlertEvent = collections.namedtuple(
@@ -37,10 +36,10 @@ class AlertSystem:
         self._tts_queue = queue.Queue(maxsize=5)
 
         self.engine = None
-        self.twilio_client = None
+        self.email_configured = False
 
         print("🔊 TTS Enabled:", config.ENABLE_TTS and TTS_OK)
-        print("📱 SMS Enabled:", config.ENABLE_SMS and TWILIO_OK and config.TWILIO_ACCOUNT_SID)
+        print("📧 Email Alerts Enabled:", config.ENABLE_EMAIL and EMAIL_OK and config.EMAIL_SENDER)
 
         if config.ENABLE_TTS and TTS_OK:
             try:
@@ -51,11 +50,11 @@ class AlertSystem:
             except Exception as e:
                 print("[TTS INIT ERROR]", e)
 
-        if config.ENABLE_SMS and TWILIO_OK and config.TWILIO_ACCOUNT_SID:
+        if config.ENABLE_EMAIL and EMAIL_OK and config.EMAIL_SENDER and config.EMAIL_PASSWORD:
             try:
-                self.twilio_client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
+                self.email_configured = True
             except Exception as e:
-                print("[SMS INIT ERROR]", e)
+                print("[EMAIL INIT ERROR]", e)
 
         self._alert_sound = None
         if config.ENABLE_SOUND and PYGAME_OK:
@@ -80,16 +79,16 @@ class AlertSystem:
         now = time.time()
         last = self._cooldowns.get(alert_type, 0)
 
-        # For SMS, send every time without cooldown
-        send_sms = config.ENABLE_SMS and self.twilio_client and config.ALERT_TO_NUMBERS
+        # For email, send every time without cooldown
+        send_email = config.ENABLE_EMAIL and self.email_configured and config.ALERT_TO_EMAILS
 
-        if send_sms:
+        if send_email:
             msg = config.ALERT_MESSAGES.get(alert_type, "Alert!")
-            threading.Thread(target=self._send_sms, args=(msg,), daemon=True).start()
-            print(f"[ALERT] {msg} (SMS sent)")
+            threading.Thread(target=self._send_email, args=(alert_type, msg), daemon=True).start()
+            print(f"[ALERT] {msg} (Email sent)")
 
-        # Apply cooldown only for non-SMS alerts
-        if not send_sms and now - last < config.ALERT_COOLDOWN_SEC:
+        # Apply cooldown only for non-email alerts
+        if not send_email and now - last < config.ALERT_COOLDOWN_SEC:
             return []
 
         self._cooldowns[alert_type] = now
@@ -106,18 +105,37 @@ class AlertSystem:
         print(f"[ALERT] {msg}")
         return [msg]
 
-    def _send_sms(self, message):
-        for number in config.ALERT_TO_NUMBERS:
-            if number.strip():
+    def _send_email(self, alert_type, message):
+        """Send alert via email"""
+        for email in config.ALERT_TO_EMAILS:
+            email = email.strip()
+            if email:
                 try:
-                    self.twilio_client.messages.create(
-                        body=message,
-                        from_=config.TWILIO_FROM_NUMBER,
-                        to=number.strip()
-                    )
-                    print(f"[SMS] Sent to {number}: {message}")
+                    # Create email message
+                    msg = MIMEMultipart()
+                    msg["From"] = config.EMAIL_SENDER
+                    msg["To"] = email
+                    msg["Subject"] = f"[Driver Safety Alert] {alert_type.upper()}"
+                    
+                    body = f"""Driver Safety System Alert
+                    
+Alert Type: {alert_type}
+Message: {message}
+Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+
+Please take immediate action if necessary.
+"""
+                    msg.attach(MIMEText(body, "plain"))
+                    
+                    # Send email via SMTP
+                    with smtplib.SMTP(config.EMAIL_SMTP_SERVER, config.EMAIL_SMTP_PORT) as server:
+                        server.starttls()  # Secure the connection
+                        server.login(config.EMAIL_SENDER, config.EMAIL_PASSWORD)
+                        server.send_message(msg)
+                    
+                    print(f"[EMAIL] Sent to {email}: {message}")
                 except Exception as e:
-                    print(f"[SMS ERROR] Failed to send to {number}: {e}")
+                    print(f"[EMAIL ERROR] Failed to send to {email}: {e}")
 
     def _tts_worker(self):
         while True:
