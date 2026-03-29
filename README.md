@@ -40,21 +40,27 @@ unsafe driving conditions.
 
 ------------------------------------------------------------------------
 
-# 📱 SMS Alerts (Optional)
+# � Email Alerts (Optional)
 
-The system can send automated SMS alerts to specified phone numbers when critical events occur.
+The system can send automated email alerts to specified email addresses when critical events occur.
 
 ### Setup
-1. Sign up for a [Twilio account](https://www.twilio.com/) and get a phone number.
-2. Install dependencies: `pip install -r requirements.txt` (includes Twilio).
+1. Choose an email provider (Gmail, Outlook, Yahoo, etc.)
+2. For Gmail: Generate an [App Password](https://support.google.com/accounts/answer/185833) (required for security)
 3. Set environment variables:
    ```
-   export TWILIO_ACCOUNT_SID="your_account_sid"
-   export TWILIO_AUTH_TOKEN="your_auth_token"
-   export TWILIO_FROM_NUMBER="+1234567890"  # Your Twilio number
-   export ALERT_TO_NUMBERS="+0987654321,+1123456789"  # Comma-separated recipients
+   export EMAIL_SENDER="your-email@gmail.com"
+   export EMAIL_PASSWORD="your-app-password"  # Use App Password for Gmail
+   export EMAIL_SMTP_SERVER="smtp.gmail.com"  # smtp.office365.com for Outlook
+   export EMAIL_SMTP_PORT="587"
+   export ALERT_TO_EMAILS="recipient1@example.com,recipient2@example.com"
    ```
-4. Enable SMS in `config.py` by setting `ENABLE_SMS = True`.
+4. Enable email alerts in `config.py` by setting `ENABLE_EMAIL = True`.
+
+### Supported Email Providers
+- **Gmail:** `smtp.gmail.com:587` (requires App Password)
+- **Outlook:** `smtp.office365.com:587`
+- **Yahoo:** `smtp.mail.yahoo.com:587`
 
 Alerts will be sent for drowsiness, phone detection, and critical risk levels.
 
